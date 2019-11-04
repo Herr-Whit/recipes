@@ -12,17 +12,22 @@ def main():
         exit(1)
     key = sys.argv[1]
     num = sys.argv[2]
-
-    recipes = get_recipes(key, num)
+    recipes = []
+    while True:
+        more = get_recipes(key, num)
+        if len(more) > 0:
+            recipes = recipes + get_recipes(key, num)
+        else:
+            break
     print("Got info! Here is...")
-    f = open('recipes2', 'wb+')
+    f = open('recipes_main', 'wb')
     pickle.dump(recipes, f)
     f.close()
 
 
 def get_recipes(key, number, type='random'):
     if type == 'random':
-        URL = 'https://api.spoonacular.com/recipes/random?apiKey=' + key + "&number=" + number
+        URL = 'https://api.spoonacular.com/recipes/random?apiKey=' + key + "&number=" + number + "&dishTypes=main_course" + "&vegetarian=false&vegan=false&glutenFree=false&dairyFree=false&veryPopular=false"
     else:
         exit(1)
     params = {
@@ -31,10 +36,13 @@ def get_recipes(key, number, type='random'):
     }
     print(params)
     reply = requests.get(url=URL)
-    print(reply.content.decode())
-    print(reply.request)
-    recipes = reply.content
-    return recipes
+    if reply.status_code == 200:
+        print(reply.content.decode())
+        print(reply.request)
+        recipes = json.loads(reply.content.decode())
+        return recipes['recipes']
+    else:
+        return []
 
 
 if __name__ == '__main__':
