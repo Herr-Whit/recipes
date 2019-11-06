@@ -6,35 +6,37 @@ from time import sleep
 from matplotlib import pyplot as plt
 from networkx.algorithms import community as cm
 import re
+import random
 
 
 def main():
-    if not len(sys.argv) == 2:
-        print("Use: analyze read/write")
+    if not len(sys.argv) == 3:
+        print("Use: analyze read/write size")
         exit(1)
     if sys.argv[1] == 'write':
-        f = open('recipes2', 'rb')
+        f = open('res/recipes_balanced', 'rb')
         recipes = pickle.load(f)
         f.close()
         print(len(recipes))
 
-        f = open('simple_recipes', 'wb')
+        f = open('res/simple_recipes', 'wb')
         simple_recipes = simplify(recipes)
         simple_recipes = filter_cuisine(simple_recipes)
         pickle.dump(simple_recipes, f)
         f.close()
 
-        G = build_network(simple_recipes[0:1500])
-        f = open('network', 'wb')
+        G = build_network(random.sample(simple_recipes, int(sys.argv[2])))
+        f = open('res/network', 'wb')
         pickle.dump(G, f)
         f.close()
         exit(0)
     elif sys.argv[1] == 'read':
-        f = open('network', 'rb')
-        G = pickle.load(f)
-        f.close()
-        f = open('simple_recipes', 'rb')
+        f = open('res/simple_recipes', 'rb')
         simple_recipes = pickle.load(f)
+        f.close()
+        f = open('res/network', 'rb')
+        G = build_network(random.sample(simple_recipes, int(sys.argv[2])))
+        #pickle.load(f)
         f.close()
     else:
         exit(2)
@@ -48,7 +50,6 @@ def main():
                 continue
             else:
                 possible_cuisines.append(cuisine)
-
 
     print(len(simple_recipes))
     print('Built network')
@@ -85,26 +86,74 @@ def main():
         if not found:
             ncolors.append('black')
 
-    nx.draw(mcc_graph, node_size=10, line_width=0.05, node_color=ncolors)
-    plt.savefig('graph')
+    nx.draw(mcc_graph, node_size=10, line_width=0.005, node_color=ncolors)
+    plt.savefig('img/graph.png')
+    plt.clf()
     for i in range(len(cliques)):
         try:
             print('\n\n', colors[i], '\n')
-            count_ing, count_cuisines = comm_characteristics(cliques[i], simple_recipes)
-            print(count_ing[0])
-            print(count_ing[1])
-            print(count_cuisines[0])
-            print(count_cuisines[1], '\n')
-            for node in cliques[i]:
-                continue
+            report_stats(cliques[i], simple_recipes, save='img/clique' + str(i) + '.png')
+            for node in list(cliques[i])[0:10]:
                 print(node)
                 print(list(filter(lambda rec: rec['title'] == node, simple_recipes))[0]['cuisines'])
         except IndexError:
             break
     print(possible_cuisines)
-    f = open('cliques', 'wb')
+    print("Distribution of cuisines:")
+    report_stats(G.nodes, simple_recipes)
+    report_stats(mcc_graph.nodes, simple_recipes, save='img/baseline.png')
+    f = open('img/distribution.png', 'wb')
+    plt.savefig(f)
+    f.close()
+    f = open('res/cliques', 'wb')
     pickle.dump(cliques, f)
     f.close()
+    sumn = 0
+    for clique in cliques:
+        print(len(clique))
+        sumn += len(clique)
+    print("Number of nodes: ", sumn)
+
+
+def report_stats(nodes, recipes, save='no'):
+    count_ing, count_cuisines = comm_characteristics(nodes, recipes)
+    '''try:
+        idx = count_cuisines[0].index('European')
+        del count_cuisines[1][idx:idx + 1]
+        count_cuisines[0].remove('European')
+    except ValueError:
+        pass
+    try:
+        idx = count_cuisines[0].index('Eastern European')
+        del count_cuisines[1][idx:idx + 1]
+        count_cuisines[0].remove('Eastern European')
+    except ValueError:
+        pass
+    try:
+        idx = count_cuisines[0].index('Mediterranean')
+        del count_cuisines[1][idx:idx + 1]
+        count_cuisines[0].remove('Mediterranean')
+    except ValueError:
+        pass
+    try:
+        idx = count_cuisines[0].index('Asian')
+        del count_cuisines[1][idx:idx + 1]
+        count_cuisines[0].remove('Asian')
+    except ValueError:
+        pass
+    '''
+    if not save == 'no':
+        f = open(save, 'wb')
+        plt.subplot(111)
+        plt.bar(count_cuisines[0][0:8], count_cuisines[1][0:8])
+        plt.savefig(f)
+        plt.clf()
+        f.close()
+    print(count_ing[0])
+    print(count_ing[1])
+    print(count_cuisines[0])
+    print(count_cuisines[1], '\n')
+
 
 def simplify(recipes):
     simple_recipes = []
@@ -149,7 +198,7 @@ def build_network(recipes):
             for ingredient in recipe['ingredients']:
                 if ingredient in recipe2['ingredients']:
                     count += 1
-            if count > 5:
+            if count > 6:
                 graph.add_edge(recipe['title'], recipe2['title'])
     return graph
 
