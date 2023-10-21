@@ -6,3 +6,5 @@ In order to manage the computational load of the clustering algorithms, several 
 The data was collected from spoonacular: https://spoonacular.com/
 
 Note: This project was created under considerable time pressure. I consider it some of my ugliest code -please take it with a grain of salt.
+
+Ilan was here!!
